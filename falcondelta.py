@@ -9,6 +9,7 @@ with deep DEX analysis and risk assessment.
 https://github.com/falcon0x1/FalconDelta
 """
 
+import base64
 import click
 import json
 import os
@@ -187,9 +188,22 @@ def extract_apk_info(apk_path: str, deep_analysis: bool = False) -> dict:
 
 def compare_lists(old_list: list, new_list: list) -> dict:
     """Compare two lists and return added/removed items."""
-    old_set = set(old_list)
-    new_set = set(new_list)
-    
+
+    def make_hashable(lst):
+        safe_list = []
+        for item in lst:
+            if isinstance(item, (dict, list, set)):
+                safe_list.append(str(item))
+            else:
+                safe_list.append(item)
+        return safe_list
+
+    old_safe = make_hashable(old_list)
+    new_safe = make_hashable(new_list)
+
+    old_set = set(old_safe)
+    new_set = set(new_safe)
+
     return {
         "added": sorted(list(new_set - old_set)),
         "removed": sorted(list(old_set - new_set)),
@@ -397,137 +411,342 @@ def generate_html_report(diff: dict, old_path: str, new_path: str) -> str:
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     risks = diff.get("risks", {"critical": [], "high": [], "medium": [], "low": []})
     
+    # Load and encode logo as base64
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    logo_path = os.path.join(script_dir, "assets", "logo.png")
+    logo_base64 = ""
+    if os.path.exists(logo_path):
+        with open(logo_path, "rb") as logo_file:
+            logo_base64 = base64.b64encode(logo_file.read()).decode("utf-8")
+    
+    # Create data URI for logo
+    logo_data_uri = f"data:image/png;base64,{logo_base64}" if logo_base64 else ""
+    
     html = f'''<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>APK Comparison Report - falcon0x1</title>
+    <title>𓅃 FalconDelta Report - falcon0x1</title>
+    <link rel="icon" type="image/png" href="{logo_data_uri}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {{
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a25;
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-highlight: rgba(255, 255, 255, 0.12);
+            --text-primary: #f0f0f5;
+            --text-secondary: #8888a0;
+            --text-muted: #555566;
+            --accent-cyan: #00d4ff;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --accent-gold: #fbbf24;
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.4);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.4);
+            --warning: #f59e0b;
+            --warning-glow: rgba(245, 158, 11, 0.4);
+        }}
+        
         * {{
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }}
         
+        html {{
+            scroll-behavior: smooth;
+        }}
+        
         body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
             min-height: 100vh;
-            color: #eee;
-            padding: 20px;
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }}
+        
+        /* Animated Gradient Background */
+        .bg-gradient {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -2;
+            background: 
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse 60% 40% at 80% 20%, rgba(0, 212, 255, 0.12) 0%, transparent 50%),
+                radial-gradient(ellipse 50% 60% at 60% 80%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
+                linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            animation: gradientShift 20s ease infinite;
+        }}
+        
+        @keyframes gradientShift {{
+            0%, 100% {{ opacity: 1; }}
+            50% {{ opacity: 0.8; }}
+        }}
+        
+        /* Floating Orbs */
+        .floating-orb {{
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            animation: floatOrb 25s ease-in-out infinite;
+        }}
+        
+        .orb-1 {{
+            width: 400px;
+            height: 400px;
+            background: rgba(139, 92, 246, 0.15);
+            top: -100px;
+            right: -100px;
+        }}
+        
+        .orb-2 {{
+            width: 300px;
+            height: 300px;
+            background: rgba(0, 212, 255, 0.12);
+            bottom: 10%;
+            left: -50px;
+            animation-delay: -10s;
+        }}
+        
+        .orb-3 {{
+            width: 250px;
+            height: 250px;
+            background: rgba(236, 72, 153, 0.1);
+            top: 50%;
+            right: 20%;
+            animation-delay: -15s;
+        }}
+        
+        @keyframes floatOrb {{
+            0%, 100% {{ transform: translate(0, 0) scale(1); }}
+            25% {{ transform: translate(30px, -30px) scale(1.05); }}
+            50% {{ transform: translate(-20px, 20px) scale(0.95); }}
+            75% {{ transform: translate(20px, 30px) scale(1.02); }}
+        }}
+        
+        /* Noise Texture Overlay */
+        .noise-overlay {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: -1;
+            opacity: 0.03;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
         }}
         
         .container {{
-            max-width: 1200px;
+            max-width: 1100px;
             margin: 0 auto;
+            padding: 40px 20px;
+            position: relative;
         }}
         
+        /* Glass Card Base */
+        .glass {{
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+        }}
+        
+        .glass::before {{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--glass-highlight), transparent);
+        }}
+        
+        /* Header */
         .header {{
             text-align: center;
-            padding: 40px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
+            padding: 50px 40px;
             margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        }}
+        
+        .header-icon {{
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            display: inline-block;
+            animation: iconFloat 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(0, 212, 255, 0.4));
+        }}
+        
+        @keyframes iconFloat {{
+            0%, 100% {{ transform: translateY(0); }}
+            50% {{ transform: translateY(-10px); }}
         }}
         
         .header h1 {{
-            font-size: 2.5em;
-            background: linear-gradient(90deg, #00d4ff, #7c3aed, #f472b6);
+            font-size: 2.8em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 50%, var(--accent-pink) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
         }}
         
         .header .subtitle {{
-            color: #888;
-            font-size: 0.9em;
+            color: var(--text-secondary);
+            font-size: 1em;
+            font-weight: 400;
         }}
         
         .header .author {{
-            margin-top: 15px;
-            color: #7c3aed;
-            font-weight: bold;
-            font-size: 1.2em;
+            margin-top: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.05));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 50px;
+            color: var(--accent-purple);
+            font-weight: 600;
+            font-size: 0.95em;
         }}
         
+        .header .timestamp {{
+            margin-top: 15px;
+            color: var(--text-muted);
+            font-size: 0.85em;
+            font-family: 'JetBrains Mono', monospace;
+        }}
+        
+        /* Risk Banner */
         .risk-banner {{
-            padding: 20px;
-            border-radius: 15px;
+            padding: 30px;
             margin-bottom: 30px;
             text-align: center;
+            position: relative;
+        }}
+        
+        .risk-banner::after {{
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            padding: 2px;
+            background: linear-gradient(135deg, transparent, var(--glass-highlight));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
         }}
         
         .risk-banner.critical {{
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(185, 28, 28, 0.3));
-            border: 2px solid #ef4444;
-            animation: pulse 2s infinite;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.05));
+            border-color: rgba(239, 68, 68, 0.4);
+            box-shadow: 0 0 60px var(--danger-glow), inset 0 0 60px rgba(239, 68, 68, 0.05);
+            animation: dangerPulse 2s ease-in-out infinite;
         }}
         
         .risk-banner.high {{
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(217, 119, 6, 0.3));
-            border: 2px solid #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+            border-color: rgba(245, 158, 11, 0.4);
+            box-shadow: 0 0 50px var(--warning-glow);
         }}
         
         .risk-banner.safe {{
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.2));
-            border: 2px solid #22c55e;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+            border-color: rgba(16, 185, 129, 0.4);
+            box-shadow: 0 0 50px var(--success-glow);
         }}
         
-        @keyframes pulse {{
-            0%, 100% {{ opacity: 1; }}
-            50% {{ opacity: 0.7; }}
+        @keyframes dangerPulse {{
+            0%, 100% {{ box-shadow: 0 0 60px var(--danger-glow), inset 0 0 60px rgba(239, 68, 68, 0.05); }}
+            50% {{ box-shadow: 0 0 80px var(--danger-glow), inset 0 0 80px rgba(239, 68, 68, 0.08); }}
+        }}
+        
+        .risk-banner .risk-icon {{
+            font-size: 2.5em;
+            margin-bottom: 15px;
         }}
         
         .risk-banner h2 {{
-            font-size: 1.5em;
-            margin-bottom: 10px;
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 8px;
         }}
         
-        .risk-banner.critical h2 {{ color: #ef4444; }}
-        .risk-banner.high h2 {{ color: #f59e0b; }}
-        .risk-banner.safe h2 {{ color: #22c55e; }}
+        .risk-banner.critical h2 {{ color: var(--danger); }}
+        .risk-banner.high h2 {{ color: var(--warning); }}
+        .risk-banner.safe h2 {{ color: var(--success); }}
         
+        .risk-banner p {{
+            color: var(--text-secondary);
+            font-size: 0.95em;
+        }}
+        
+        /* Meta Grid */
         .meta-grid {{
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
             margin-bottom: 30px;
         }}
         
         .meta-card {{
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 28px;
+            transition: all 0.3s ease;
+        }}
+        
+        .meta-card:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
         }}
         
         .meta-card.old {{
-            border-left: 4px solid #ef4444;
+            border-left: 3px solid var(--danger);
         }}
         
         .meta-card.new {{
-            border-left: 4px solid #22c55e;
+            border-left: 3px solid var(--success);
         }}
         
         .meta-card h3 {{
-            margin-bottom: 15px;
             display: flex;
             align-items: center;
             gap: 10px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: 600;
         }}
         
-        .meta-card.old h3 {{ color: #ef4444; }}
-        .meta-card.new h3 {{ color: #22c55e; }}
+        .meta-card.old h3 {{ color: var(--danger); }}
+        .meta-card.new h3 {{ color: var(--success); }}
         
         .meta-item {{
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--glass-border);
         }}
         
         .meta-item:last-child {{
@@ -535,173 +754,306 @@ def generate_html_report(diff: dict, old_path: str, new_path: str) -> str:
         }}
         
         .meta-label {{
-            color: #888;
+            color: var(--text-secondary);
+            font-size: 0.9em;
         }}
         
         .meta-value {{
-            font-family: 'Consolas', monospace;
-            color: #00d4ff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            color: var(--accent-cyan);
+            background: rgba(0, 212, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 6px;
         }}
         
+        /* Sections */
         .section {{
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 15px;
-            padding: 25px;
+            padding: 30px;
             margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }}
+        
+        .section:hover {{
+            border-color: var(--glass-highlight);
         }}
         
         .section.danger {{
-            border-color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
+            border-color: rgba(239, 68, 68, 0.3);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), var(--glass-bg));
         }}
         
         .section h2 {{
             display: flex;
             align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--glass-border);
+            font-size: 1.2em;
+            font-weight: 600;
         }}
         
+        .section h2 .section-icon {{
+            font-size: 1.3em;
+        }}
+        
+        /* Badges */
         .badge {{
-            font-size: 0.7em;
+            font-size: 0.75em;
             padding: 4px 12px;
-            border-radius: 20px;
-            font-weight: normal;
+            border-radius: 50px;
+            font-weight: 500;
+            font-family: 'JetBrains Mono', monospace;
         }}
         
         .badge.added {{
-            background: rgba(34, 197, 94, 0.2);
-            color: #22c55e;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
         }}
         
         .badge.removed {{
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }}
         
         .badge.danger {{
-            background: rgba(239, 68, 68, 0.3);
-            color: #ef4444;
-            animation: pulse 1s infinite;
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            animation: badgePulse 2s ease-in-out infinite;
         }}
         
+        @keyframes badgePulse {{
+            0%, 100% {{ opacity: 1; }}
+            50% {{ opacity: 0.7; }}
+        }}
+        
+        /* Diff List */
         .diff-list {{
             list-style: none;
         }}
         
         .diff-item {{
-            padding: 12px 15px;
-            margin: 8px 0;
-            border-radius: 8px;
-            font-family: 'Consolas', monospace;
-            font-size: 0.9em;
+            padding: 14px 18px;
+            margin: 10px 0;
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }}
+        
+        .diff-item:hover {{
+            transform: translateX(-4px);
         }}
         
         .diff-item.added {{
-            background: rgba(34, 197, 94, 0.1);
-            border-right: 3px solid #22c55e;
-            color: #22c55e;
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.2);
+            color: var(--success);
+        }}
+        
+        .diff-item.added:hover {{
+            background: rgba(16, 185, 129, 0.12);
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
         }}
         
         .diff-item.removed {{
-            background: rgba(239, 68, 68, 0.1);
-            border-right: 3px solid #ef4444;
-            color: #ef4444;
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }}
+        
+        .diff-item.removed:hover {{
+            background: rgba(239, 68, 68, 0.12);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.15);
         }}
         
         .diff-item.danger {{
-            background: rgba(239, 68, 68, 0.2);
-            border-right: 5px solid #ef4444;
-            color: #fff;
-            animation: pulse 2s infinite;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(239, 68, 68, 0.08));
+            border-color: rgba(239, 68, 68, 0.4);
+            color: var(--text-primary);
+            animation: dangerItemPulse 2s ease-in-out infinite;
+        }}
+        
+        @keyframes dangerItemPulse {{
+            0%, 100% {{ box-shadow: 0 0 20px rgba(239, 68, 68, 0.2); }}
+            50% {{ box-shadow: 0 0 30px rgba(239, 68, 68, 0.35); }}
         }}
         
         .diff-item .danger-label {{
-            background: #ef4444;
+            background: linear-gradient(135deg, var(--danger), #dc2626);
             color: white;
-            padding: 2px 8px;
-            border-radius: 4px;
+            padding: 4px 10px;
+            border-radius: 6px;
             font-size: 0.8em;
-            margin-right: 10px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }}
         
         .diff-icon {{
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: bold;
+            opacity: 0.8;
         }}
         
+        /* No Changes */
         .no-changes {{
             text-align: center;
-            padding: 30px;
-            color: #888;
+            padding: 40px;
+            color: var(--text-muted);
         }}
         
         .no-changes .icon {{
-            font-size: 2em;
-            margin-bottom: 10px;
+            font-size: 2.5em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }}
+        
+        .no-changes p {{
+            font-size: 0.95em;
         }}
         
         .url-item {{
             word-break: break-all;
         }}
         
+        /* Summary Grid */
         .summary {{
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 16px;
             margin-top: 30px;
         }}
         
         .summary-card {{
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 20px;
+            padding: 24px 16px;
             text-align: center;
+            transition: all 0.3s ease;
+        }}
+        
+        .summary-card:hover {{
+            transform: translateY(-4px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.25);
         }}
         
         .summary-card .number {{
-            font-size: 2em;
-            font-weight: bold;
+            font-size: 2.2em;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            line-height: 1;
         }}
         
         .summary-card .label {{
-            color: #888;
-            font-size: 0.85em;
-            margin-top: 5px;
+            color: var(--text-secondary);
+            font-size: 0.8em;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }}
         
-        .summary-card.added .number {{ color: #22c55e; }}
-        .summary-card.removed .number {{ color: #ef4444; }}
-        .summary-card.danger .number {{ color: #ef4444; animation: pulse 1s infinite; }}
+        .summary-card.added .number {{ 
+            color: var(--success);
+            text-shadow: 0 0 30px var(--success-glow);
+        }}
         
+        .summary-card.removed .number {{ 
+            color: var(--danger);
+            text-shadow: 0 0 30px var(--danger-glow);
+        }}
+        
+        .summary-card.danger .number {{ 
+            color: var(--danger);
+            text-shadow: 0 0 30px var(--danger-glow);
+            animation: badgePulse 2s ease-in-out infinite;
+        }}
+        
+        /* Footer */
         .footer {{
             text-align: center;
-            padding: 30px;
-            color: #666;
+            padding: 40px 20px;
+            margin-top: 20px;
+            color: var(--text-muted);
             font-size: 0.85em;
         }}
         
+        .footer p {{
+            margin: 5px 0;
+        }}
+        
+        .footer .brand {{
+            color: var(--accent-purple);
+            font-weight: 600;
+        }}
+        
+        /* Responsive */
         @media (max-width: 768px) {{
+            .container {{
+                padding: 20px 15px;
+            }}
+            
+            .header {{
+                padding: 35px 25px;
+            }}
+            
+            .header h1 {{
+                font-size: 2em;
+            }}
+            
             .meta-grid {{
                 grid-template-columns: 1fr;
             }}
+            
+            .glass {{
+                border-radius: 20px;
+            }}
+            
+            .section, .meta-card, .risk-banner {{
+                padding: 20px;
+            }}
+        }}
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {{
+            width: 10px;
+        }}
+        
+        ::-webkit-scrollbar-track {{
+            background: var(--bg-secondary);
+        }}
+        
+        ::-webkit-scrollbar-thumb {{
+            background: var(--glass-highlight);
+            border-radius: 5px;
+        }}
+        
+        ::-webkit-scrollbar-thumb:hover {{
+            background: rgba(255, 255, 255, 0.2);
         }}
     </style>
 </head>
 <body>
+    <div class="bg-gradient"></div>
+    <div class="floating-orb orb-1"></div>
+    <div class="floating-orb orb-2"></div>
+    <div class="floating-orb orb-3"></div>
+    <div class="noise-overlay"></div>
+    
     <div class="container">
-        <div class="header">
-            <h1>𓅃 APK Deep Analysis Report</h1>
+        <div class="header glass">
+            <img src="{logo_data_uri}" alt="FalconDelta Logo" class="header-icon">
+            <h1>FalconDelta Analysis Report</h1>
             <p class="subtitle">تقرير التحليل العميق لملفات APK</p>
-            <p class="author">By falcon0x1 𓅃</p>
-            <p class="subtitle" style="margin-top: 10px;">Generated: {timestamp}</p>
+            <span class="author">𓅃 falcon0x1</span>
+            <p class="timestamp">Generated: {timestamp}</p>
         </div>
 '''
     
@@ -711,21 +1063,21 @@ def generate_html_report(diff: dict, old_path: str, new_path: str) -> str:
     
     if critical_count > 0:
         html += f'''
-        <div class="risk-banner critical">
+        <div class="risk-banner critical glass">
             <h2>𓆲 CRITICAL: {critical_count} dangerous changes detected!</h2>
             <p>This update contains dangerous changes that require careful review</p>
         </div>
 '''
     elif high_count > 0:
         html += f'''
-        <div class="risk-banner high">
+        <div class="risk-banner high glass">
             <h2>𓅆 WARNING: {high_count} high-risk changes detected</h2>
             <p>Review recommended before use</p>
         </div>
 '''
     else:
         html += '''
-        <div class="risk-banner safe">
+        <div class="risk-banner safe glass">
             <h2>𓅓 SAFE: No significant risks detected</h2>
             <p>Changes appear normal</p>
         </div>
@@ -734,7 +1086,7 @@ def generate_html_report(diff: dict, old_path: str, new_path: str) -> str:
     # Metadata cards
     html += f'''
         <div class="meta-grid">
-            <div class="meta-card old">
+            <div class="meta-card old glass">
                 <h3>𓅉 Old APK</h3>
                 <div class="meta-item">
                     <span class="meta-label">Package</span>
@@ -754,7 +1106,7 @@ def generate_html_report(diff: dict, old_path: str, new_path: str) -> str:
                 </div>
             </div>
             
-            <div class="meta-card new">
+            <div class="meta-card new glass">
                 <h3>𓅈 New APK</h3>
                 <div class="meta-item">
                     <span class="meta-label">Package</span>
@@ -785,7 +1137,7 @@ def generate_html_report(diff: dict, old_path: str, new_path: str) -> str:
         danger_badge = '<span class="badge danger">𓆲 DANGER</span>' if is_danger and added else ""
         
         section_html = f'''
-        <div class="section {danger_class}">
+        <div class="section glass {danger_class}">
             <h2>
                 {icon} {title}
                 <span class="badge added">+{len(added)}</span>
@@ -850,27 +1202,27 @@ def generate_html_report(diff: dict, old_path: str, new_path: str) -> str:
     
     html += f'''
         <div class="summary">
-            <div class="summary-card {"danger" if dangerous_added > 0 else ""}">
+            <div class="summary-card glass {"danger" if dangerous_added > 0 else ""}">
                 <div class="number">{dangerous_added}</div>
                 <div class="label">Dangerous Permissions</div>
             </div>
-            <div class="summary-card added">
+            <div class="summary-card glass added">
                 <div class="number">{total_added}</div>
                 <div class="label">Total Added</div>
             </div>
-            <div class="summary-card removed">
+            <div class="summary-card glass removed">
                 <div class="number">{total_removed}</div>
                 <div class="label">Total Removed</div>
             </div>
-            <div class="summary-card">
-                <div class="number" style="color: #00d4ff;">{len(diff.get("urls", {{}}).get("added", []))}</div>
+            <div class="summary-card glass">
+                <div class="number" style="color: var(--accent-cyan);">{len(diff.get("urls", {}).get("added", []))}</div>
                 <div class="label">New URLs</div>
             </div>
         </div>
         
         <div class="footer">
-            <p>APK Deep Analyzer | Powered by Androguard</p>
-            <p>Created by falcon0x1 𓅃</p>
+            <p><span class="brand">𓅃 FalconDelta</span> | Powered by Androguard</p>
+            <p>Created by falcon0x1</p>
         </div>
     </div>
 </body>
