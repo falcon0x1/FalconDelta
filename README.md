@@ -185,7 +185,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 𓅃 Author
 
 <p align="center">
-  <img src="assets/logo.png" alt="FalconDelta Logo" width="100">
+  <img src="assets/logo-black.png" alt="Falcon0x1 Logo" width="100">
 </p>
 
 <p align="center">
